@@ -1,0 +1,58 @@
+import os
+import json
+import re
+
+repo_owner = "hotswen"
+repo_name = "lx-music-source"
+base_raw = f"https://githubusercontent.com{repo_owner}/{repo_name}/main"
+base_proxy = f"https://gh-proxy.org{repo_owner}/{repo_name}/main"
+base_pages = f"https://{repo_owner}.github.io/{repo_name}"
+
+os.makedirs("_site", exist_ok=True)
+sources = []
+
+for entry in sorted(os.listdir(".")):
+    js_path = os.path.join(entry, "latest.js")
+    if os.path.isdir(entry) and os.path.isfile(js_path):
+        with open(js_path, "r", encoding="utf-8", errors="ignore") as f:
+            head = f.read(1500)
+        name_m = re.search(r"@name\s+(.+)", head)
+        ver_m = re.search(r"@version\s+(.+)", head)
+        desc_m = re.search(r"@description\s+(.+)", head)
+
+        sources.append({
+            "id": entry,
+            "name": name_m.group(1).strip() if name_m else entry,
+            "version": ver_m.group(1).strip() if ver_m else "latest",
+            "description": desc_m.group(1).strip() if desc_m else "",
+            "pages_url": f"{base_pages}/{entry}/latest.js",
+            "raw_url": f"{base_raw}/{entry}/latest.js",
+            "proxy_url": f"{base_proxy}/{entry}/latest.js"
+        })
+        os.makedirs(f"_site/{entry}", exist_ok=True)
+        with open(js_path, "rb") as src, open(f"_site/{entry}/latest.js", "wb") as dst:
+            dst.write(src.read())
+
+output = {
+    "total": len(sources),
+    "sources": sources
+}
+
+with open("_site/sources.json", "w", encoding="utf-8") as f:
+    json.dump(output, f, ensure_ascii=False, indent=2)
+
+html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>LX Music Sources</title>
+<style>body{{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6}}
+code{{background:#f4f4f4;padding:2px 6px;border-radius:4px;word-break:break-all}}</style></head>
+<body><h1>LX Music 音源列表 ({len(sources)} 个)</h1>
+<p>JSON 接口地址：<a href="./sources.json"><code>{base_pages}/sources.json</code></a></p><ul>"""
+for s in sources:
+    html += f"<li><strong>{s['name']}</strong> ({s['version']})<br>直链: <code>{s['pages_url']}</code><br>加速: <code>{s['proxy_url']}</code></li><br>"
+
+html += "</ul></body></html>"
+
+with open("_site/index.html", "w", encoding="utf-8") as f:
+    f.write(html)
+  
