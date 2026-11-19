@@ -1,0 +1,27 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    # 原仓库每天北京时间 01:00 进行音源可用性检测，这里设为每天 02:30（UTC 18:30）自动拉取最新结果
+    - cron: '30 18 * * *'
+  # 支持在 Actions 页面手动点击按钮立即运行
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Sync upstream changes
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          upstream_sync_repo: pdone/lx-music-source
+          upstream_sync_branch: main
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
